@@ -7,6 +7,15 @@ error() {
     exit 1
 }
 
+usage_error() {
+    >&2 echo "Usage: $progname: [dims|transpose|mean|add|multiply] [ARGS]"
+    exit 1
+}
+
+assert_readable() {
+    [ ! -r "$1" ] && error "file $1 not readable"
+}
+
 parse_matrix() {
     matrix=()
     numrows=0
@@ -49,7 +58,33 @@ parse_matrix() {
         fi
 
         ((++lineno))
-    done < "$1"
+    done < "${1:-/dev/stdin}"
 
     matrix=($numrows $numcols ${matrix[@]})
 }
+
+dims() {
+    parse_matrix "$1"
+
+    echo "${matrix[@]:0:2}"
+}
+
+# validate command line arguments
+[ $# -eq 0 ] && usage_error
+
+case "$1" in
+    "dims" | "transpose" | "mean")
+        [ $# -gt 2 ] && usage_error
+        [ $# -eq 2 ] && assert_readable "$2"
+        ;;
+    "add" | "multiply")
+        [ $# -ne 3 ] && usage_error
+        assert_readable "$2"
+        assert_readable "$3"
+        ;;
+    *)
+        error "unknown operation: $1"
+esac
+
+# execute operation
+$1 "${@:2}"
