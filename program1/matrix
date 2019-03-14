@@ -18,6 +18,7 @@ assert_readable() {
 
 parse_matrix() {
     matrix=()
+
     numrows=0
     numcols=0
 
@@ -59,6 +60,8 @@ parse_matrix() {
 
         ((++lineno))
     done < "${1:-/dev/stdin}"
+
+    numelems=$((numrows * numcols))
 }
 
 print_matrix() {
@@ -88,19 +91,22 @@ dims() {
 transpose() {
     parse_matrix "$1"
 
+    declare -a _matrix=($(for i in {1..$numelems}; do echo 0; done))
+
     for ((r = 0; r < $numrows; ++r)); do
         for ((c = 0; c < $numcols; ++c)); do
-            [ $c -eq $r ] && continue
+            i=$((r * numcols + c))
+            i_transposed=$((c * numrows + r))
 
-            i1=$((r * numcols + c))
-            i2=$((c * numcols + r))
-
-            tmp=${matrix[$i1]}
-
-            matrix[$i1]=${matrix[$i2]}
-            matrix[$i2]=$tmp
+            _matrix[$i_transposed]=${matrix[$i]}
         done
     done
+
+    matrix=("${_matrix[@]}")
+
+    tmp=$numrows
+    numrows=$numcols
+    numcols=$tmp
 
     print_matrix
 }
