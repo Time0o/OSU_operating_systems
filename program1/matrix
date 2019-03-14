@@ -63,6 +63,15 @@ parse_matrix() {
     matrix=($numrows $numcols ${matrix[@]})
 }
 
+print_matrix() {
+    numrows=${matrix[0]}
+    numcols=${matrix[1]}
+
+    for ((r = 0; r < $numrows; ++r)); do
+        echo "${matrix[@]:$((2 + r * numcols)):$numcols}"
+    done
+}
+
 dims() {
     parse_matrix "$1"
 
