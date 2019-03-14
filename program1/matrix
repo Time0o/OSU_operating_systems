@@ -85,6 +85,26 @@ dims() {
     echo "$numrows $numcols"
 }
 
+transpose() {
+    parse_matrix "$1"
+
+    for ((r = 0; r < $numrows; ++r)); do
+        for ((c = 0; c < $numcols; ++c)); do
+            [ $c -eq $r ] && continue
+
+            i1=$((r * numcols + c))
+            i2=$((c * numcols + r))
+
+            tmp=${matrix[$i1]}
+
+            matrix[$i1]=${matrix[$i2]}
+            matrix[$i2]=$tmp
+        done
+    done
+
+    print_matrix
+}
+
 # validate command line arguments
 [ $# -eq 0 ] && usage_error
 
