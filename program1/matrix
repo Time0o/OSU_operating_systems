@@ -67,8 +67,20 @@ print_matrix() {
     numrows=${matrix[0]}
     numcols=${matrix[1]}
 
+    # determine 'widest' number in matrix
+    padding=0
+    for ((i = 2; i < $((2 + numrows * numcols)); ++i)); do
+        _padding=${#matrix[i]}
+        [ $_padding -gt $padding ] && padding=$_padding
+    done
+
+    # print matrix row by row
     for ((r = 0; r < $numrows; ++r)); do
-        echo "${matrix[@]:$((2 + r * numcols)):$numcols}"
+        row="${matrix[@]:$((2 + r * numcols)):$numcols}"
+
+        # print with cell padding and strip trailing whitespace
+        printf "%${padding}s " $row | sed -e 's/[[:space:]]*$//'
+        printf "\n"
     done
 }
 
