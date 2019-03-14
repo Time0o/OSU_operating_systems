@@ -1,0 +1,55 @@
+#!/bin/bash
+
+progname=$(basename $0)
+
+error() {
+    >&2 echo "$progname: error: $1"
+    exit 1
+}
+
+parse_matrix() {
+    matrix=()
+    numrows=0
+    numcols=0
+
+    lineno=1
+    while read line; do
+        # file location to display on parsing error
+        loc="line $lineno of $1"
+
+        # skip empty lines
+        if [[ ! "$line" =~ ^[[:space:]]*$ ]]; then
+            # read in next matrix row
+            row=()
+
+            if [[ "$line" =~ ^[[:space:]]*(-?[1-9][0-9]*[[:space:]]*)*$ ]]; then
+                for entry in ${BASH_REMATCH[0]}; do
+                    row+=($entry)
+                done
+            else
+                error "malformed matrix row in line $loc"
+            fi
+
+            # validate number of columns in row
+            _numcols=${#row[@]}
+
+            if [ $lineno -eq 1 ]; then
+                numcols=$_numcols
+            elif [ $_numcols -ne $numcols ]; then
+                err="invalid row dimension in $loc"
+                err="$err (expected $numcols but got $_numcols)"
+
+                error "$err"
+            fi
+
+            # append row to matrix
+            matrix+=(${row[@]})
+
+            ((++numrows))
+        fi
+
+        ((++lineno))
+    done < "$1"
+
+    matrix=($numrows $numcols ${matrix[@]})
+}
