@@ -111,6 +111,26 @@ transpose() {
     print_matrix
 }
 
+mean() {
+    parse_matrix "$1"
+
+    declare -a _matrix=($(for i in {1..$numcols}; do echo 0; done))
+
+    for ((c = 0; c < $numcols; ++c)); do
+        for ((r = 0; r < $numrows; ++r)); do
+            ((_matrix[c] +=  matrix[$((r * numcols + c))]))
+        done
+
+        ((_matrix[c] = (_matrix[c] + numrows / 2) / numrows))
+    done
+
+    matrix=("${_matrix[@]}")
+
+    numrows=1
+
+    print_matrix
+}
+
 # validate command line arguments
 [ $# -eq 0 ] && usage_error
 
