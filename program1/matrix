@@ -12,6 +12,13 @@ usage_error() {
     exit 1
 }
 
+dimension_error() {
+   err="matrix dimension mismatch"
+   err="$err (${numrows1}x${numcols1} and ${numrows2}x${numcols2})"
+
+   error "$err"
+}
+
 assert_readable() {
     [ ! -r "$1" ] && error "file $1 not readable"
 }
@@ -152,10 +159,7 @@ add() {
     parse_matrix "$2" 2
 
     if [ $numrows1 -ne $numrows2 ] || [ $numcols1 -ne $numcols2 ]; then
-        err="matrix dimension mismatch"
-        err="$err (${numrows1}x${numcols1} and ${numrows2}x${numcols2})"
-
-        error "$err"
+        dimension_error
     fi
 
     declare -a matrix=($(for i in {1..$numelems1}; do echo 0; done))
@@ -170,6 +174,31 @@ add() {
 
     numrows=$numrows1
     numcols=$numcols1
+
+    print_matrix
+}
+
+multiply() {
+    parse_matrix "$1" 1
+    parse_matrix "$2" 2
+
+    [ $numcols1 -ne $numrows2 ] && dimension_error
+
+    numrows=$numrows1
+    numcols=$numcols2
+    numelems=$((numrows * numcols))
+
+    declare -a matrix=($(for i in {1..$numelems}; do echo 0; done))
+
+    for ((r = 0; r < $numrows; ++r)); do
+        for ((c = 0; c < $numcols; ++c)); do
+            for ((i = 0; i < $numcols1; ++i)); do
+                ((matrix[r * numcols + c] +=
+                  matrix1[$((r * numcols1 + i))] *
+                  matrix2[$((i * numcols2 + c))]))
+            done
+        done
+    done
 
     print_matrix
 }
