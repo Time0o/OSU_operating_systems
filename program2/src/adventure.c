@@ -27,6 +27,11 @@ int main(int argc, char **argv) {
     if (create_rooms(room_dir, room_names, num_room_names) == -1)
         return -1;
 
+    /* read rooms in again */
+    struct room *rooms;
+    if (read_rooms(room_dir, &rooms) == -1)
+        return -1;
+
     /* free resources */
     free(room_dir);
 

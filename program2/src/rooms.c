@@ -1,8 +1,11 @@
 #define _GNU_SOURCE
 
 #include <assert.h>
+#include <ctype.h>
+#include <dirent.h>
 #include <errno.h>
 #include <libgen.h>
+#include <regex.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -276,4 +279,139 @@ int write_rooms(char *room_dir, struct room *rooms) {
     }
 
     return 0;
+}
+
+
+int read_rooms(char *room_dir, struct room **rooms) {
+    /* open directory */
+    DIR *dir;
+    if (!(dir = opendir(room_dir))) {
+        errprintf("failed to read directory '%s'", room_dir);
+        return -1;
+    }
+
+    /* count number of rooms (regular files in room directory) */
+    int num_rooms = 0;
+
+    struct dirent *dirent;
+    while ((dirent = readdir(dir))) {
+        if (dirent->d_type != DT_REG)
+            continue;
+
+        ++num_rooms;
+    }
+
+    rewinddir(dir);
+
+    /* read rooms into array */
+    *rooms = malloc(num_rooms * sizeof(struct room));
+
+    char *room_path = NULL, *c;
+    int room_idx, room_type_idx;
+
+    FILE *fp;
+
+    char *line = NULL;
+    size_t len;
+    int lineno;
+
+    regex_t valid_record;
+    if (regcomp(&valid_record,
+                "^(ROOM NAME|CONNECTION [1-9][0-9]*|ROOM TYPE): .*$",
+                REG_EXTENDED)) {
+
+        errprintf("failed to compile regex");
+        return -1;
+    }
+
+    room_idx = 0;
+    while ((dirent = readdir(dir))) {
+        if (dirent->d_type != DT_REG)
+            continue;
+
+        /* open room file */
+        if (asprintf(&room_path, "%s/%s", room_dir, dirent->d_name) == -1) {
+            errprintf("asprintf failed");
+            free(rooms);
+            return -1;
+        }
+
+        if (!(fp = fopen(room_path, "r"))) {
+            errprintf("failed to open '%s'", room_path);
+            free(rooms);
+            free(room_path);
+            return -1;
+        }
+
+        /* iterate over lines in room file */
+        lineno = 0;
+        for (;;) {
+            line = NULL;
+            len = 0;
+
+            errno = 0;
+            if (getline(&line, &len, fp) == -1) {
+                if (errno == EINVAL || errno == ENOMEM) {
+                    errprintf("getline failed");
+                    goto cleanup;
+
+                } else {
+                    break;
+                }
+            }
+
+            line[strlen(line) - 1] = '\0';
+
+            if (regexec(&valid_record, line, 0, NULL, 0)) {
+                errprintf("invalid record '%s' in '%s'", line, room_path);
+                goto cleanup;
+            }
+
+            c = strchr(line, ':');
+            while (isspace(*c))
+                ++c;
+
+            if (lineno == 0) {
+                /* read room name */
+                (*rooms)[room_idx].name = c;
+
+            } else if (strncmp(line, "ROOM_TYPE", strlen("ROOM_TYPE")) == 0) {
+                /* read room type */
+                int valid_room_type = 0;
+
+                for (room_type_idx = 0; room_type_idx < NUM_ROOM_TYPE; ++room_type_idx) {
+                    if (strcmp(c, ROOM_TYPE_STR[room_type_idx]) == 0) {
+                        (*rooms)[room_idx].type = room_type_idx;
+                        valid_room_type = 1;
+                    }
+                }
+
+                if (!valid_room_type) {
+                    errprintf("invalid room type '%s'", c);
+                    goto cleanup;
+                }
+            }
+
+            free(line);
+
+            ++lineno;
+        }
+
+        free(room_path);
+
+        ++room_idx;
+    }
+
+    closedir(dir);
+
+    return 0;
+
+cleanup:
+    closedir(dir);
+
+    free(*rooms);
+    free(room_path);
+    free(line);
+
+    return -1;
 }

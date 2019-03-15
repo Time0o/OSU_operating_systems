@@ -1,7 +1,7 @@
 #ifndef ROOMS_H
 #define ROOMS_H
 
-enum { NUM_ROOMS = 7, MIN_CONN = 3, MAX_CONN = 6 };
+enum { NUM_ROOMS = 7, NUM_ROOM_TYPE = 3, MIN_CONN = 3, MAX_CONN = 6 };
 
 #define ROOM_TYPES(fn)  \
         fn(START_ROOM), \
@@ -24,5 +24,6 @@ int parse_room_names(char ***room_names);
 int create_room_dir(char **room_dir);
 int create_rooms(char *room_dir, char **room_names, int num_room_names);
 int write_rooms(char *room_dir, struct room *rooms);
+int read_rooms(char *room_dir, struct room **rooms);
 
 #endif /* ROOMS_H */
