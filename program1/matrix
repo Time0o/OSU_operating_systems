@@ -142,10 +142,10 @@ mean() {
 
     for ((c = 0; c < $numcols1; ++c)); do
         for ((r = 0; r < $numrows1; ++r)); do
-            ((_matrix[c] += matrix1[$((r * numcols1 + c))]))
+            ((matrix[c] += matrix1[$((r * numcols1 + c))]))
         done
 
-        ((matrix[c] = (_matrix[c] + numrows1 / 2) / numrows1))
+        matrix[c]=$(printf "%.0f" $(bc -l <<< "${matrix[c]} / $numrows1"))
     done
 
     numrows=1
