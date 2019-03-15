@@ -39,7 +39,7 @@ parse_matrix() {
             # read in next matrix row
             row=()
 
-            if [[ "$line" =~ ^[[:space:]]*(-?[1-9][0-9]*[[:space:]]*)*$ ]]; then
+            if [[ "$line" =~ ^[[:space:]]*(-?[0-9]*[[:space:]]*)*$ ]]; then
                 for entry in ${BASH_REMATCH[0]}; do
                     row+=($entry)
                 done
