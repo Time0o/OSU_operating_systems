@@ -262,7 +262,7 @@ int write_rooms(char *room_dir, struct room *rooms) {
         }
 
         FILE *fp;
-        if ((fp = fopen(file_name, "w")) == NULL) {
+        if (!(fp = fopen(file_name, "w"))) {
             errprintf("failed to open '%s'", file_name);
             free(file_name);
             return -1;
