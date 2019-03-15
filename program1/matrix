@@ -17,10 +17,10 @@ assert_readable() {
 }
 
 parse_matrix() {
-    matrix=()
+    declare -a matrix=()
 
-    numrows=0
-    numcols=0
+    declare _numrows=0
+    declare _numcols=0
 
     lineno=1
     while read line; do
@@ -55,13 +55,26 @@ parse_matrix() {
             # append row to matrix
             matrix+=(${row[@]})
 
-            ((++numrows))
+            ((++_numrows))
         fi
 
         ((++lineno))
     done < "${1:-/dev/stdin}"
 
-    numelems=$((numrows * numcols))
+    if [ $2 -eq 1 ]; then
+        matrix1=("${matrix[@]}")
+
+        numrows1=$_numrows
+        numcols1=$_numcols
+        numelems1=$((numrows1 * numcols1))
+
+    elif [ $2 -eq 2 ]; then
+        matrix2=("${matrix[@]}")
+
+        numrows2=$_numrows
+        numcols2=$_numcols
+        numelems2=$((numrows2 * numcols2))
+    fi
 }
 
 print_matrix() {
@@ -90,50 +103,46 @@ print_matrix() {
 }
 
 dims() {
-    parse_matrix "$1"
+    parse_matrix "$1" 1
 
-    echo "$numrows $numcols"
+    echo "$numrows1 $numcols1"
 }
 
 transpose() {
-    parse_matrix "$1"
+    parse_matrix "$1" 1
 
-    declare -a _matrix=($(for i in {1..$numelems}; do echo 0; done))
+    declare -a matrix=($(for i in {1..$numelems1}; do echo 0; done))
 
-    for ((r = 0; r < $numrows; ++r)); do
-        for ((c = 0; c < $numcols; ++c)); do
-            i=$((r * numcols + c))
-            i_transposed=$((c * numrows + r))
+    for ((r = 0; r < $numrows1; ++r)); do
+        for ((c = 0; c < $numcols1; ++c)); do
+            i=$((r * numcols1 + c))
+            i_transposed=$((c * numrows1 + r))
 
-            _matrix[$i_transposed]=${matrix[$i]}
+            matrix[$i_transposed]=${matrix1[$i]}
         done
     done
 
-    matrix=("${_matrix[@]}")
-
-    tmp=$numrows
-    numrows=$numcols
-    numcols=$tmp
+    numrows=$numcols1
+    numcols=$numrows1
 
     print_matrix
 }
 
 mean() {
-    parse_matrix "$1"
+    parse_matrix "$1" 1
 
-    declare -a _matrix=($(for i in {1..$numcols}; do echo 0; done))
+    declare -a matrix=($(for i in {1..$numcols1}; do echo 0; done))
 
-    for ((c = 0; c < $numcols; ++c)); do
-        for ((r = 0; r < $numrows; ++r)); do
-            ((_matrix[c] +=  matrix[$((r * numcols + c))]))
+    for ((c = 0; c < $numcols1; ++c)); do
+        for ((r = 0; r < $numrows1; ++r)); do
+            ((_matrix[c] += matrix1[$((r * numcols1 + c))]))
         done
 
-        ((_matrix[c] = (_matrix[c] + numrows / 2) / numrows))
+        ((matrix[c] = (_matrix[c] + numrows1 / 2) / numrows1))
     done
 
-    matrix=("${_matrix[@]}")
-
     numrows=1
+    numcols=$numcols1
 
     print_matrix
 }
