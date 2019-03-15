@@ -147,6 +147,33 @@ mean() {
     print_matrix
 }
 
+add() {
+    parse_matrix "$1" 1
+    parse_matrix "$2" 2
+
+    if [ $numrows1 -ne $numrows2 ] || [ $numcols1 -ne $numcols2 ]; then
+        err="matrix dimension mismatch"
+        err="$err (${numrows1}x${numcols1} and ${numrows2}x${numcols2})"
+
+        error "$err"
+    fi
+
+    declare -a matrix=($(for i in {1..$numelems1}; do echo 0; done))
+
+    for ((r = 0; r < $numrows1; ++r)); do
+        for ((c = 0; c < $numcols1; ++c)); do
+            i=$((r * numcols + c))
+
+            ((matrix[i] = matrix1[i] + matrix2[i]))
+        done
+    done
+
+    numrows=$numrows1
+    numcols=$numcols1
+
+    print_matrix
+}
+
 # validate command line arguments
 [ $# -eq 0 ] && usage_error
 
