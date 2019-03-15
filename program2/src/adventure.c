@@ -30,8 +30,9 @@ int main(int argc, char **argv) {
     /* free resources */
     free(room_dir);
 
-    for (int r = 0; r < num_room_names; ++r)
-        free(room_names[r]);
+    int room_name_idx = 0;
+    for (room_name_idx = 0; room_name_idx < num_room_names; ++room_name_idx)
+        free(room_names[room_name_idx]);
 
     free(room_names);
 

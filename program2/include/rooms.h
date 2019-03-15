@@ -25,4 +25,4 @@ int create_room_dir(char **room_dir);
 int create_rooms(char *room_dir, char **room_names, int num_room_names);
 int write_rooms(char *room_dir, struct room *rooms);
 
-#endif // ROOMS_H
+#endif /* ROOMS_H */

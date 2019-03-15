@@ -3,4 +3,4 @@
 
 int errprintf(char const *msg, ...);
 
-#endif // UTIL_H
+#endif /* UTIL_H */

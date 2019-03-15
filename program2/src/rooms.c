@@ -73,16 +73,18 @@ int parse_room_names(char ***room_names) {
     *room_names = malloc(num_room_names * sizeof(char *));
     int num_room_names_valid = 0;
 
-    errno = 0;
-    for (int r = 0; r < num_room_names; ++r) {
+    int r = 0;
+    for (r = 0; r < num_room_names; ++r) {
         char *line = NULL;
         size_t len = 0;
 
+        errno = 0;
         if (getline(&line, &len, fp) == -1) {
             if (errno == EINVAL || errno == ENOMEM) {
                 errprintf("getline failed");
 
-                for (int r_ = 0; r_ < num_room_names_valid; ++r_)
+                int r_ = 0;
+                for (r_ = 0; r_ < num_room_names_valid; ++r_)
                     free((*room_names)[r_]);
 
                 free((*room_names));
@@ -143,61 +145,62 @@ int create_rooms(char *room_dir, char **room_names, int num_room_names) {
     /* see rand */
     srand(time(NULL));
 
-    /* create rooms */
+    /* indexing variables */
+    int room_idx, room_idx_next, room_name_idx, conn, conn_prev, conn_next;
+
+    /* create rooms structures */
     struct room *rooms = malloc(NUM_ROOMS * sizeof(struct room));
     int *room_name_taken = calloc(num_room_names, sizeof(int));
 
-    for (int i = 0; i < NUM_ROOMS; ++i) {
+    for (room_idx = 0; room_idx < NUM_ROOMS; ++room_idx) {
         struct room room;
 
         /* randomly choose next room name */
-        int j;
-
         do {
-            j = rand() % num_room_names;
-        } while (room_name_taken[j]);
+            room_name_idx = rand() % num_room_names;
+        } while (room_name_taken[room_name_idx]);
 
-        room.name = room_names[j];
-        room_name_taken[j] = 1;
+        room.name = room_names[room_name_idx];
+        room_name_taken[room_name_idx] = 1;
 
         /* pre-allocate connection array */
-        for (int k = 0; k < MAX_CONN; ++k)
-            room.connections[k] = NULL;
+        int conn = 0;
+        for (conn = 0; conn < MAX_CONN; ++conn)
+            room.connections[conn] = NULL;
 
         /* set room type */
-        if (i == 0)
+        if (room_idx == 0)
             room.type = START_ROOM;
-        else if (i == NUM_ROOMS - 1)
+        else if (room_idx == NUM_ROOMS - 1)
             room.type = END_ROOM;
         else
             room.type = MID_ROOM;
 
-        rooms[i] = room;
+        rooms[room_idx] = room;
     }
 
     free(room_name_taken);
 
     /* connect rooms */
-    for (int room_idx = 0; room_idx < NUM_ROOMS - 1; ++room_idx) {
+    for (room_idx = 0; room_idx < NUM_ROOMS - 1; ++room_idx) {
         struct room *room = &rooms[room_idx];
 
         int num_connections = rand() % (MAX_CONN - MIN_CONN) + MIN_CONN;
 
-        for (int conn = 0; conn < num_connections; ++conn) {
+        for (conn = 0; conn < num_connections; ++conn) {
             if (room->connections[conn])
                 continue;
 
-            int next_room_idx;
             for (;;) {
-                next_room_idx = rand() % NUM_ROOMS;
+                room_idx_next = rand() % NUM_ROOMS;
 
-                if (next_room_idx == room_idx)
+                if (room_idx_next == room_idx)
                     continue;
 
-                struct room *next_room = &rooms[next_room_idx];
+                struct room *next_room = &rooms[room_idx_next];
 
                 int unique = 1;
-                for (int conn_prev = conn - 1; conn_prev >= 0; --conn_prev) {
+                for (conn_prev = conn - 1; conn_prev >= 0; --conn_prev) {
                     if (room->connections[conn_prev] == next_room) {
                         unique = 0;
                         break;
@@ -207,7 +210,7 @@ int create_rooms(char *room_dir, char **room_names, int num_room_names) {
                 if (!unique)
                     continue;
 
-                int conn_next = 0;
+                conn_next = 0;
                 while (next_room->connections[conn_next])
                     ++conn_next;
 
@@ -216,7 +219,7 @@ int create_rooms(char *room_dir, char **room_names, int num_room_names) {
                 break;
             }
 
-            room->connections[conn] = &rooms[next_room_idx];
+            room->connections[conn] = &rooms[room_idx_next];
         }
     }
 
@@ -248,7 +251,8 @@ static void write_room(struct room room, FILE *fp) {
 
 
 int write_rooms(char *room_dir, struct room *rooms) {
-    for (int room_idx = 0; room_idx < NUM_ROOMS; ++room_idx) {
+    int room_idx = 0;
+    for (room_idx = 0; room_idx < NUM_ROOMS; ++room_idx) {
         struct room room = rooms[room_idx];
 
         char *file_name = NULL;

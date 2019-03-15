@@ -7,7 +7,7 @@ SRC=$(wildcard $(SRC_DIR)/*.c)
 INC=$(wildcard $(INC_DIR)/*.h)
 OBJ=$(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRC))
 
-CFLAGS=-std=c99 -Wall -g
+CFLAGS=-std=c89 -Wall -g
 
 $(BIN_DIR)/adventure: $(OBJ)
 	gcc $(CFLAGS) -o $@ $^
