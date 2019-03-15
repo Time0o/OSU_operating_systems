@@ -246,7 +246,7 @@ static void write_room(struct room room, FILE *fp) {
             break;
     }
 
-    fprintf(fp, "ROOM_TYPE: %s\n", ROOM_TYPE_STR[room.type]);
+    fprintf(fp, "ROOM TYPE: %s\n", ROOM_TYPE_STR[room.type]);
 }
 
 
