@@ -1,5 +1,7 @@
 #!/bin/bash
 
+PRETTY=false
+
 progname=$(basename $0)
 
 error() {
@@ -100,11 +102,16 @@ print_matrix() {
         row="${matrix[@]:$((r * numcols)):$numcols}"
 
         # print with cell padding and strip trailing whitespace
-        if [ $numrows -gt 1 ]; then
-            printf "%${padding}s " $row | sed -e 's/[[:space:]]*$//'
-            printf "\n"
+        if [ $PRETTY = true ]; then
+            if [ $numrows -gt 1 ]; then
+                printf "%${padding}s " $row | sed -e 's/[[:space:]]*$//'
+                printf "\n"
+            else
+                echo "$row"
+            fi
         else
-            echo "$row"
+            printf "%s\t" $row | sed -e 's/[[:space:]]*$//'
+            printf "\n"
         fi
     done
 }
