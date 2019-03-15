@@ -1,5 +1,16 @@
 #!/bin/bash
 
+USAGE="[dims|transpose|mean|add|multiply] [ARGS]
+
+dims [M]:       print the dimensions of a matrix passed via file or stdin
+transpose [M]:  print the transpose of a matrix passed via file or stdin
+mean [M]:       print the means of each column of a matrix passed via file or stdin
+add M1 M2:      print the sum of two matrices passed as files
+multiply M1 M2: print the matrix product of two matrices passed as files
+
+M/M1/M2 should each simply be several newline separated rows, containing the same
+number of elements separated by arbitrary whitespace."
+
 PRETTY=false
 
 progname=$(basename $0)
@@ -10,7 +21,7 @@ error() {
 }
 
 usage_error() {
-    >&2 echo "Usage: $progname: [dims|transpose|mean|add|multiply] [ARGS]"
+    >&2 echo "Usage: $progname: $USAGE"
     exit 1
 }
 
