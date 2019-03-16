@@ -127,23 +127,8 @@ int main(int argc, char **argv) {
 
     /* create socket */
     int sock_fd;
-    if ((sock_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+    if ((sock_fd = bind_socket(port)) == -1) {
         errprintf("failed to create socket");
-        exit(EXIT_FAILURE);
-    }
-
-    /* bind socket */
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-
-    /* bind to localhost for now */
-    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-
-    if (bind(sock_fd, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
-        errprintf("binding to socket failed");
         exit(EXIT_FAILURE);
     }
 

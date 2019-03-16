@@ -1,10 +1,14 @@
 #define _GNU_SOURCE
 
+#include <arpa/inet.h>
 #include <errno.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
 #include "util.h"
 
@@ -44,4 +48,32 @@ long long strtoll_safe(char *str) {
         return -1;
 
     return n;
+}
+
+
+/* bind socket */
+int bind_socket(int port) {
+    /* create socket */
+    int sock_fd;
+    if ((sock_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+        errprintf("failed to create socket");
+        return -1;
+    }
+
+    /* bind socket */
+    struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
+
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+
+    /* bind to localhost for now */
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
+    if (bind(sock_fd, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
+        errprintf("binding to socket failed");
+        return -1;
+    }
+
+    return sock_fd;
 }
