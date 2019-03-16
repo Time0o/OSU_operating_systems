@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
         return 1;
 
     /* parse room names */
-    int num_room_names = parse_room_names(&room_names);
+    int num_room_names = read_room_names(&room_names);
     if (num_room_names == -1)
         goto cleanup1;
 

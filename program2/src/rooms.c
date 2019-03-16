@@ -24,7 +24,7 @@ static char const *ROOM_NAME_FILE = "../resources/room_names.txt";
 char const *ROOM_TYPE_STR[] = { ROOM_TYPES(STRING) };
 
 
-int parse_room_names(char ***room_names) {
+int read_room_names(char ***room_names) {
     /* open room name file */
     char *source_file = malloc(strlen(__FILE__) + 1);
     strcpy(source_file, __FILE__);

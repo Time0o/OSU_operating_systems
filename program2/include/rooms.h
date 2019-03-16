@@ -20,7 +20,7 @@ struct room {
     enum room_type type;
 };
 
-int parse_room_names(char ***room_names);
+int read_room_names(char ***room_names);
 int create_room_dir(char **room_dir);
 int create_rooms(char *room_dir, char **room_names, int num_room_names);
 int write_rooms(char *room_dir, struct room *rooms);
