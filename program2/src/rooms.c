@@ -83,6 +83,8 @@ int parse_room_names(char ***room_names) {
 
         errno = 0;
         if (getline(&line, &len, fp) == -1) {
+            free(line);
+
             if (errno == EINVAL || errno == ENOMEM) {
                 errprintf("getline failed");
 
@@ -304,10 +306,8 @@ int read_rooms(char *room_dir, struct room **rooms) {
     rewinddir(dir);
 
     /* read rooms into array */
-    *rooms = malloc(num_rooms * sizeof(struct room));
-
-    char *room_path = NULL, *c;
-    int room_idx, room_type_idx;
+    char *room_path = NULL, *c = NULL, *val = NULL;
+    int room_idx, room_idx_next, room_type_idx, conn_idx;
 
     FILE *fp;
 
@@ -315,6 +315,12 @@ int read_rooms(char *room_dir, struct room **rooms) {
     size_t len;
     int lineno;
 
+    /* allocate room array */
+    *rooms = malloc(num_rooms * sizeof(struct room));
+    for (room_idx = 0; room_idx < num_rooms; ++room_idx)
+        (*rooms)[room_idx].name = NULL;
+
+    /* compile file record validation regex */
     regex_t valid_record;
     if (regcomp(&valid_record,
                 "^(ROOM NAME|CONNECTION [1-9][0-9]*|ROOM TYPE): .*$",
@@ -324,24 +330,26 @@ int read_rooms(char *room_dir, struct room **rooms) {
         return -1;
     }
 
-    room_idx = 0;
+    /* iterate over files in room directory */
     while ((dirent = readdir(dir))) {
+        /* skip all non-regular files */
         if (dirent->d_type != DT_REG)
             continue;
 
         /* open room file */
+        room_path = NULL;
         if (asprintf(&room_path, "%s/%s", room_dir, dirent->d_name) == -1) {
             errprintf("asprintf failed");
-            free(rooms);
-            return -1;
+            goto error1;
         }
 
         if (!(fp = fopen(room_path, "r"))) {
             errprintf("failed to open '%s'", room_path);
-            free(rooms);
-            free(room_path);
-            return -1;
+            goto error1;
         }
+
+        /* reset connection index */
+        conn_idx = 0;
 
         /* iterate over lines in room file */
         lineno = 0;
@@ -349,47 +357,88 @@ int read_rooms(char *room_dir, struct room **rooms) {
             line = NULL;
             len = 0;
 
+            /* read next line */
             errno = 0;
             if (getline(&line, &len, fp) == -1) {
+                free(line);
+
                 if (errno == EINVAL || errno == ENOMEM) {
                     errprintf("getline failed");
-                    goto cleanup;
+                    goto error2;
 
                 } else {
-                    break;
+                  break;
                 }
             }
 
             line[strlen(line) - 1] = '\0';
 
+            /* check whether line constitutes valid record */
             if (regexec(&valid_record, line, 0, NULL, 0)) {
                 errprintf("invalid record '%s' in '%s'", line, room_path);
-                goto cleanup;
+                goto error2;
             }
 
-            c = strchr(line, ':');
+            /* obtain record value */
+            c = strchr(line, ':') + 1;
             while (isspace(*c))
                 ++c;
 
-            if (lineno == 0) {
-                /* read room name */
-                (*rooms)[room_idx].name = c;
+            val = malloc(strlen(c) + 1);
+            strcpy(val, c);
 
-            } else if (strncmp(line, "ROOM_TYPE", strlen("ROOM_TYPE")) == 0) {
+            if (lineno == 0) {
+                /* check if room with given name was already encountered */
+                room_idx = 0;
+                while ((*rooms)[room_idx].name
+                       && strcmp(val, (*rooms)[room_idx].name) != 0) {
+
+                    ++room_idx;
+                }
+
+                /* otherwise add room name to array */
+                if (!(*rooms)[room_idx].name)
+                    (*rooms)[room_idx].name = val;
+                else
+                    free(val);
+
+            } else if (strncmp(line, "ROOM TYPE", strlen("ROOM_TYPE")) == 0) {
                 /* read room type */
                 int valid_room_type = 0;
 
                 for (room_type_idx = 0; room_type_idx < NUM_ROOM_TYPE; ++room_type_idx) {
-                    if (strcmp(c, ROOM_TYPE_STR[room_type_idx]) == 0) {
+                    if (strcmp(val, ROOM_TYPE_STR[room_type_idx]) == 0) {
                         (*rooms)[room_idx].type = room_type_idx;
                         valid_room_type = 1;
                     }
                 }
 
+                free(val);
+
+                /* error on invalid room type */
                 if (!valid_room_type) {
-                    errprintf("invalid room type '%s'", c);
-                    goto cleanup;
+                    errprintf("invalid room type '%s'", val);
+                    goto error2;
                 }
+
+            } else if (strncmp(line, "CONNECTION", strlen("CONNECTION")) == 0) {
+                for (room_idx_next = 0; room_idx_next < NUM_ROOMS; ++room_idx_next) {
+                    /* add next room to array if not already encountered */
+                    if (!(*rooms)[room_idx_next].name) {
+                        (*rooms)[room_idx_next].name = val;
+                        break;
+                    }
+
+                    if (strcmp(val, (*rooms)[room_idx_next].name) == 0) {
+                        free(val);
+                        break;
+                    }
+                }
+
+                /* set connection pointer */
+                (*rooms)[room_idx].connections[conn_idx] = &(*rooms)[room_idx_next];
+
+                ++conn_idx;
             }
 
             free(line);
@@ -399,19 +448,27 @@ int read_rooms(char *room_dir, struct room **rooms) {
 
         free(room_path);
 
-        ++room_idx;
+        fclose(fp);
     }
 
     closedir(dir);
+    regfree(&valid_record);
 
-    return 0;
+    return num_rooms;
 
-cleanup:
+error2:
+    fclose(fp);
+    free(line);
+
+error1:
     closedir(dir);
+    regfree(&valid_record);
+
+    for (room_idx = 0; room_idx < num_rooms; ++room_idx)
+        free((*rooms)[room_idx].name);
 
     free(*rooms);
     free(room_path);
-    free(line);
 
     return -1;
 }
