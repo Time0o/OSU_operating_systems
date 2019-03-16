@@ -9,7 +9,7 @@ OBJ=$(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRC))
 
 CFLAGS=-std=c89 -Wall -g
 
-_progs=keygen otp_enc otp_dec
+_progs=keygen otp_enc otp_dec otp_enc_d otp_dec_d
 progs=$(patsubst %, $(BIN_DIR)/%, $(_progs))
 
 all: $(progs)
@@ -21,6 +21,12 @@ $(OBJ_DIR)/otp_enc.o: $(SRC_DIR)/otp_client.c $(INC)
 	gcc $(CFLAGS) -DENC -c $< -o $@ -I$(INC_DIR)
 
 $(OBJ_DIR)/otp_dec.o: $(SRC_DIR)/otp_client.c $(INC)
+	gcc $(CFLAGS) -DDEC -c $< -o $@ -I$(INC_DIR)
+
+$(OBJ_DIR)/otp_enc_d.o: $(SRC_DIR)/otp_server.c $(INC)
+	gcc $(CFLAGS) -DENC -c $< -o $@ -I$(INC_DIR)
+
+$(OBJ_DIR)/otp_dec_d.o: $(SRC_DIR)/otp_server.c $(INC)
 	gcc $(CFLAGS) -DDEC -c $< -o $@ -I$(INC_DIR)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(INC)
