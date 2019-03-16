@@ -7,6 +7,7 @@
 #include <readline/readline.h>
 
 #include "rooms.h"
+#include "util.h"
 
 
 /* program name */
@@ -44,7 +45,7 @@ int main(int argc, char **argv) {
 
     ret = 0;
 
-    /* start readline loop */
+    /* find starting room */
     struct room *current_room, *next_room;
 
     for (room_idx = 0; room_idx < NUM_ROOMS; ++room_idx) {
@@ -52,6 +53,16 @@ int main(int argc, char **argv) {
             current_room = &rooms[room_idx];
     }
 
+    /* store path taken in linked list */
+    struct ll path_head, *path_tail, *path_node, *tmp;
+    int path_length = 0;
+
+    path_head.val = current_room->name;
+    path_head.next = NULL;
+
+    path_tail = &path_head;
+
+    /* start readline loop */
     char const *prompt_fmt =
         "CURRENT LOCATION: %s\nPOSSIBLE CONNECTIONS: %s\nWHERE TO? >";
 
@@ -98,10 +109,37 @@ int main(int argc, char **argv) {
         free(buf);
 
         if (next_room_valid) {
+            /* update current room */
             current_room = next_room;
+            ++path_length;
+
+            /* add room to path */
+            path_tail->next = malloc(sizeof(struct ll));
+            path_tail->next->val = current_room->name;
+            path_tail->next->next = NULL;
+            path_tail = path_tail->next;
+
             if (current_room->type == END_ROOM) {
                 printf("YOU HAVE FOUND THE END ROOM. CONGRATULATIONS!\n");
-                /* TODO: display path */
+
+                /* display path taken*/
+                printf("YOU TOOK %d STEPS. YOUR PATH TO VICTORY WAS:\n",
+                       path_length);
+
+                path_node = path_head.next;
+                while (path_node) {
+                    printf((path_node->next ? "%s\n" : "%s"), path_node->val);
+                    path_node = path_node->next;
+                }
+
+                /* deallocate path list */
+                path_node = path_head.next;
+                while (path_node) {
+                    tmp = path_node->next;
+                    free(path_node);
+                    path_node = tmp;
+                }
+
                 break;
             }
         } else {
