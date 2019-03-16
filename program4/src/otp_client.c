@@ -5,12 +5,75 @@
 #include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 
 #include "util.h"
 
 
+/* constants */
+enum { CHUNK_SIZE = 256 };
+
 /* program name */
 char *progname;
+
+
+static long long read_block(char *file, char **block) {
+    FILE *fp = fopen(file, "r");
+    if (!fp) {
+        errprintf("failed to open '%s'\n", file);
+        goto error;
+    }
+
+    /* determine size of block */
+    long long block_length = 0;
+
+    int c;
+    for (;;) {
+        c = fgetc(fp);
+
+        if (c == EOF) {
+            errprintf("failed to read '%s'\n", file);
+            goto error;
+        }
+
+        if (c == '\n')
+            break;
+
+        ++block_length;
+    }
+
+    rewind(fp);
+
+    /* allocate block */
+    *block = malloc(block_length);
+    if (!*block) {
+        errprintf("failed to allocated block");
+        goto error;
+    }
+
+    /* read block */
+    long long block_offs = 0, chunk_size;
+    while (block_offs < block_length) {
+        chunk_size = CHUNK_SIZE;
+        if (block_offs + chunk_size > block_length)
+            chunk_size = block_length - block_offs;
+
+        if (fread(*block + block_offs, 1, chunk_size, fp) != chunk_size) {
+            errprintf("failed to read '%s'\n", file);
+            free(block);
+            goto error;
+        }
+
+        block_offs += chunk_size;
+    }
+
+    return block_length;
+
+error:
+    fclose(fp);
+    return -1;
+}
 
 
 int main(int argc, char **argv) {
@@ -28,21 +91,28 @@ int main(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
 
-    char *text_file = argv[1];
-    char *key_file = argv[2];
-    char *port = argv[2];
-
-    FILE *text_fp = fopen(text_file, "r");
-    if (!text_fp) {
-        errprintf("failed to open '%s'\n", text_file);
+    int port = strtoll_safe(argv[3]);
+    if (port == -1) {
+        errprintf("failed to parse port parameter");
         exit(EXIT_FAILURE);
     }
 
-    FILE *key_fp = fopen(key_file, "r");
-    if (!key_fp) {
-        errprintf("failed to open '%s'\n", key_file);
+    /* read text and key from file */
+    char *text, *key;
+    long long text_length, key_length;
+
+    if ((text_length = read_block(argv[1], &text)) == -1)
+        exit(EXIT_FAILURE);
+
+    if ((key_length = read_block(argv[2], &key)) == -1) {
+        free(text);
         exit(EXIT_FAILURE);
     }
 
-    return 0;
+    /* TODO */
+
+    free(text);
+    free(key);
+
+    exit(EXIT_SUCCESS);
 }
