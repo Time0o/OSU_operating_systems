@@ -317,8 +317,12 @@ int read_rooms(char *room_dir, struct room **rooms) {
 
     /* allocate room array */
     *rooms = malloc(num_rooms * sizeof(struct room));
-    for (room_idx = 0; room_idx < num_rooms; ++room_idx)
+    for (room_idx = 0; room_idx < num_rooms; ++room_idx) {
         (*rooms)[room_idx].name = NULL;
+
+        for (conn_idx = 0; conn_idx < MAX_CONN; ++conn_idx)
+            (*rooms)[room_idx].connections[conn_idx] = NULL;
+    }
 
     /* compile file record validation regex */
     regex_t valid_record;

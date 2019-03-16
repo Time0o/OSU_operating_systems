@@ -1,5 +1,10 @@
+#define _GNU_SOURCE
+
 #include <libgen.h>
+#include <stdio.h>
 #include <stdlib.h>
+
+#include <readline/readline.h>
 
 #include "rooms.h"
 
@@ -15,7 +20,9 @@ int main(int argc, char **argv) {
     char *room_dir = NULL, **room_names = NULL;
     struct room *rooms = NULL;
 
-    int room_idx, room_name_idx, ret = 1;
+    int room_idx, room_name_idx, conn_idx;
+
+    int ret = 1;
 
     /* create room directory */
     if (create_room_dir(&room_dir) == -1)
@@ -36,6 +43,73 @@ int main(int argc, char **argv) {
         goto cleanup3;
 
     ret = 0;
+
+    /* start readline loop */
+    struct room *current_room, *next_room;
+
+    for (room_idx = 0; room_idx < NUM_ROOMS; ++room_idx) {
+        if (rooms[room_idx].type == START_ROOM)
+            current_room = &rooms[room_idx];
+    }
+
+    char const *prompt_fmt =
+        "CURRENT LOCATION: %s\nPOSSIBLE CONNECTIONS: %s\nWHERE TO? >";
+
+    char connections[100];
+
+    for (;;) {
+        connections[0] = '\0';
+        for (conn_idx = 0; conn_idx < MAX_CONN; ++conn_idx) {
+            if (!(next_room = current_room->connections[conn_idx]))
+                break;
+
+            strcat(connections, next_room->name);
+
+            if (conn_idx < MAX_CONN - 1
+                && current_room->connections[conn_idx + 1]) {
+
+                strcat(connections, ", ");
+            }
+        }
+
+        char *prompt;
+        asprintf(&prompt, prompt_fmt, current_room->name, connections);
+
+        char *buf = readline(prompt);
+
+        free(prompt);
+
+        if (!buf)
+            break;
+
+        putchar('\n');
+
+        int next_room_valid = 0;
+        for (conn_idx = 0; conn_idx < MAX_CONN; ++conn_idx) {
+            if (!(next_room = current_room->connections[conn_idx]))
+                break;
+
+            if (strcmp(buf, next_room->name) == 0) {
+                next_room_valid = 1;
+                break;
+            }
+        }
+
+        free(buf);
+
+        if (next_room_valid) {
+            current_room = next_room;
+            if (current_room->type == END_ROOM) {
+                printf("YOU HAVE FOUND THE END ROOM. CONGRATULATIONS!\n");
+                /* TODO: display path */
+                break;
+            }
+        } else {
+            printf("HUH? I DON'T UNDERSTAND THAT ROOM. TRY AGAIN.\n\n");
+        }
+    }
+
+    putchar('\n');
 
 cleanup3:
     for (room_idx = 0; room_idx < num_rooms; ++room_idx)
