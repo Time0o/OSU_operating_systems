@@ -218,8 +218,6 @@ int main(int argc, char **argv) {
             default:
                 break;
             }
-
-            _Exit(EXIT_SUCCESS);
         }
     }
 
