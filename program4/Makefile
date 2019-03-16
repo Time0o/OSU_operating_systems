@@ -14,7 +14,7 @@ progs=$(patsubst %, $(BIN_DIR)/%, $(_progs))
 
 all: $(progs)
 
-$(BIN_DIR)/%: $(OBJ_DIR)/%.o
+$(BIN_DIR)/%: $(OBJ_DIR)/%.o $(OBJ_DIR)/util.o
 	gcc $(CFLAGS) -o $@ $^
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(INC)

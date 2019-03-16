@@ -1,14 +1,14 @@
 #define _GNU_SOURCE
 
-#include <errno.h>
 #include <fcntl.h>
 #include <libgen.h>
-#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#include "util.h"
 
 
 /* random state array size in bytes */
@@ -16,13 +16,6 @@ enum { RANDOM_STATE_SIZE = 256 };
 
 /* program name */
 char *progname;
-
-
-/* reuseable usage error handler */
-static void usage_error() {
-    fprintf(stderr, "Usage: %s KEY_LENGTH\n", progname);
-    exit(EXIT_FAILURE);
-}
 
 
 /* securely (I hope) generate a random lowercase letter or space
@@ -51,24 +44,15 @@ int main(int argc, char **argv) {
     progname = basename(argv[0]);
 
     /* parse key length argument */
-    if (argc != 2)
-        usage_error();
-
-    char *endptr;
-
-    errno = 0;
-    long long length = strtoll(argv[1], &endptr, 10);
-
-    if (errno == ERANGE) {
-        if (length == LLONG_MIN)
-            fprintf(stderr, "key length underflow\n");
-        else if (length == LLONG_MAX)
-            fprintf(stderr, "key length overflow\n");
-
+    if (argc != 2) {
+        fprintf(stderr, "Usage: %s KEY_LENGTH\n", progname);
         exit(EXIT_FAILURE);
+    }
 
-    } else if (errno == EINVAL || *endptr != '\0') {
-        usage_error();
+    long long length = strtoll_safe(argv[1]);
+    if (length == -1) {
+        errprintf("failed to parse key length argument");
+        exit(EXIT_FAILURE);
     }
 
     /* allocate heap memory for key
@@ -76,21 +60,21 @@ int main(int argc, char **argv) {
     char *key = malloc(length);
 
     if (!key) {
-        fprintf(stderr, "failed to allocate memory for key array\n");
+        errprintf("failed to allocate memory for key array");
         exit(EXIT_FAILURE);
     }
 
     /* securely seed random number generator */
     int fd = open("/dev/urandom", O_RDONLY);
     if (fd == -1) {
-        fprintf(stderr, "failed to open /dev/urandom\n");
+        errprintf("failed to open /dev/urandom");
         free(key);
         exit(EXIT_FAILURE);
     }
 
     unsigned seed;
     if (read(fd, &seed, sizeof(seed)) < 0) {
-        fprintf(stderr, "failed to read from /dev/urandom\n");
+        errprintf("failed to read from /dev/urandom");
         free(key);
         exit(EXIT_FAILURE);
     }
