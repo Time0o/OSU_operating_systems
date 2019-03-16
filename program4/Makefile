@@ -14,7 +14,7 @@ progs=$(patsubst %, $(BIN_DIR)/%, $(_progs))
 
 all: $(progs)
 
-$(BIN_DIR)/%: $(OBJ_DIR)/%.o $(OBJ_DIR)/util.o
+$(BIN_DIR)/%: $(OBJ_DIR)/%.o $(OBJ_DIR)/util.o $(OBJ_DIR)/socket.o
 	gcc $(CFLAGS) -o $@ $^
 
 $(OBJ_DIR)/otp_enc.o: $(SRC_DIR)/otp_client.c $(INC)

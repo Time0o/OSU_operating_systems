@@ -14,6 +14,7 @@
 #include <unistd.h>
 
 #include "proto.h"
+#include "socket.h"
 #include "util.h"
 
 
@@ -127,7 +128,7 @@ int main(int argc, char **argv) {
 
     /* create socket */
     int sock_fd;
-    if ((sock_fd = bind_socket(port)) == -1) {
+    if ((sock_fd = create_socket(port, SOCKET_BIND)) == -1) {
         errprintf("failed to create socket");
         exit(EXIT_FAILURE);
     }
