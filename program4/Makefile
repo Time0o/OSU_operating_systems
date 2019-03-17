@@ -31,7 +31,7 @@ $(OBJ_DIR)/otp_dec_d.o: $(SRC_DIR)/otp_server.c $(INC)
 	gcc $(CFLAGS) -DDEC -c $< -o $@ -I$(INC_DIR)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(INC)
-	gcc $(CFLAGS) -c $< -o $@ -I$(INC_DIR)
+	gcc $(CFLAGS) -DNDEBUG -c $< -o $@ -I$(INC_DIR)
 
 .PHONY: clean
 
