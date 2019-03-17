@@ -7,11 +7,11 @@ SRC=$(wildcard $(SRC_DIR)/*.c)
 INC=$(wildcard $(INC_DIR)/*.h)
 OBJ=$(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRC))
 
-CFLAGS=-std=c89 -pedantic -g -O3 -lreadline \
+CFLAGS=-std=c89 -pedantic -g -O3 \
         -Wall -Wextra -Wmissing-prototypes -Wstrict-prototypes -Wold-style-definition
 
 $(BIN_DIR)/adventure: $(OBJ)
-	gcc $(CFLAGS) -o $@ $^
+	gcc $(CFLAGS) -o $@ $^ -lreadline
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c $(INC)
 	gcc $(CFLAGS) -c $< -o $@ -I$(INC_DIR)

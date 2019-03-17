@@ -83,7 +83,8 @@ int main(int argc, char **argv) {
         }
 
         prompt_fmt = "CURRENT LOCATION: %s\nPOSSIBLE CONNECTIONS: %s\nWHERE TO? >";
-        asprintf(&prompt, prompt_fmt, current_room->name, connections);
+        if (asprintf(&prompt, prompt_fmt, current_room->name, connections) == -1)
+            errprintf("failed to create prompt");
 
         buf = readline(prompt);
 
