@@ -103,7 +103,6 @@ int main(int argc, char **argv) {
     }
 
     /* read text and key from file */
-
     if ((text_length = read_block(argv[1], &text)) == -1)
         goto error;
 
