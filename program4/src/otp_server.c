@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
                 long text_length, key_length;
 
                 /* receive protocol opcode */
-                if (read(client_sock_fd, buf, sizeof(enum proto)) == -1) {
+                if (read(client_sock_fd, buf, sizeof(proto)) != sizeof(proto)) {
                     errprintf("failed to read opcode (%s)", strerror(errno));
                     _Exit(EXIT_FAILURE);
                 }
