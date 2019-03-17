@@ -81,10 +81,11 @@ int main(int argc, char **argv) {
     unsigned client_addr_size = sizeof(client_addr);
 
     for (;;) {
-        if (accept(sock_fd,
-                   (struct sockaddr *) &client_addr,
-                   &client_addr_size) == -1) {
+        int client_sock_fd = accept(sock_fd,
+                                    (struct sockaddr *) &client_addr,
+                                    &client_addr_size);
 
+        if (client_sock_fd == -1) {
             errprintf("accepting client failed");
 
         } else {
@@ -99,7 +100,7 @@ int main(int argc, char **argv) {
                 char buf[BUF_SIZE];
 
                 /* receive protocol opcode */
-                if (read(sock_fd, buf, sizeof(enum proto)) == -1) {
+                if (read(client_sock_fd, buf, sizeof(enum proto)) == -1) {
                     errprintf("failed to read opcode (%s)", strerror(errno));
                     _Exit(EXIT_FAILURE);
                 }
@@ -121,7 +122,7 @@ int main(int argc, char **argv) {
                 char *text;
                 long long text_length;
                 if ((text_length =
-                     receive_block(sock_fd, &text, &text_length)) == -1) {
+                     receive_block(client_sock_fd, &text, &text_length)) == -1) {
 
                     _Exit(EXIT_FAILURE);
                 }
@@ -130,7 +131,7 @@ int main(int argc, char **argv) {
                 char *key;
                 long long key_length;
                 if ((key_length =
-                     receive_block(sock_fd, &key, &key_length)) == -1) {
+                     receive_block(client_sock_fd, &key, &key_length)) == -1) {
 
                     free(text);
                     _Exit(EXIT_FAILURE);
@@ -148,7 +149,7 @@ int main(int argc, char **argv) {
                 code(text, key, text_length);
 
                 /* send result */
-                if (send_block(sock_fd, text, text_length) == -1)
+                if (send_block(client_sock_fd, text, text_length) == -1)
                     _Exit(EXIT_FAILURE);
                 }
                 break;
