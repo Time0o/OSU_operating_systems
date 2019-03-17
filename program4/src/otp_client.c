@@ -176,7 +176,7 @@ int main(int argc, char **argv) {
 
     /* dump (en/de)crypted text */
     for (i = 0; i < text_length; i += sizeof(int))
-        printf("%.*s", (int) sizeof(int), key + i);
+        printf("%.*s", (int) sizeof(int), text_modified + i);
 
     putchar('\n');
 
