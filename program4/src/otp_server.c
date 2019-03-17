@@ -121,18 +121,13 @@ int main(int argc, char **argv) {
                 /* receive text */
                 char *text;
                 long long text_length;
-                if ((text_length =
-                     receive_block(client_sock_fd, &text, &text_length)) == -1) {
-
+                if (receive_block(client_sock_fd, &text, &text_length) == -1)
                     _Exit(EXIT_FAILURE);
-                }
 
                 /* receive key */
                 char *key;
                 long long key_length;
-                if ((key_length =
-                     receive_block(client_sock_fd, &key, &key_length)) == -1) {
-
+                if (receive_block(client_sock_fd, &key, &key_length) == -1) {
                     free(text);
                     _Exit(EXIT_FAILURE);
                 }
