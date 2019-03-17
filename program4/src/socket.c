@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -55,7 +56,7 @@ int send_block(int sock_fd, char *block, long long block_length) {
         if ((write_size =
              write(sock_fd, block + block_offs, chunk_size)) == -1) {
 
-            errprintf("failed to send data");
+            errprintf("failed to send data (%s)", strerror(errno));
             return -1;
         }
 
@@ -71,7 +72,7 @@ int receive_block(int sock_fd, char **block, long long *block_length) {
 
     /* receive block size */
     if (read(sock_fd, buf, sizeof(*block_length)) == -1) {
-        errprintf("failed to receive block size");
+        errprintf("failed to receive block size (%s)", strerror(errno));
         return -1;
     }
 
@@ -91,7 +92,7 @@ int receive_block(int sock_fd, char **block, long long *block_length) {
 
     while (block_offs < *block_length) {
         if ((read_size = read(sock_fd, buf, BUF_SIZE)) == -1) {
-            errprintf("failed to receive data");
+            errprintf("failed to receive data (%s)", strerror(errno));
             free(block);
             return -1;
         }

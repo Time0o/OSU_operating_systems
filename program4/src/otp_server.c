@@ -5,6 +5,7 @@
 #define _GNU_SOURCE
 
 #include <arpa/inet.h>
+#include <errno.h>
 #include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -99,7 +100,7 @@ int main(int argc, char **argv) {
 
                 /* receive protocol opcode */
                 if (read(sock_fd, buf, sizeof(enum proto)) == -1) {
-                    errprintf("failed to read opcode");
+                    errprintf("failed to read opcode (%s)", strerror(errno));
                     _Exit(EXIT_FAILURE);
                 }
 
