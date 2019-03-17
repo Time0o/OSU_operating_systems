@@ -42,6 +42,11 @@ static long read_block(char *file, char **block) {
         if (c == '\n')
             break;
 
+        if ((c < 'A' && c != ' ') || c > 'Z') {
+            errprintf("invalid character '%c' in '%s'", c, file);
+            goto error;
+        }
+
         ++block_length;
     }
 
