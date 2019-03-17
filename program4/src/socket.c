@@ -48,7 +48,7 @@ static void print_block_preview(char *block, long block_length) {
 
 
 int create_socket(int port, enum socket_mode mode) {
-    int sock_fd;
+    int sock_fd, conn_retries, conn_success;
     struct sockaddr_in addr;
 
     /* create socket */
@@ -72,7 +72,24 @@ int create_socket(int port, enum socket_mode mode) {
             return -1;
         }
     } else if (mode == SOCKET_CONNECT) {
-        if (connect(sock_fd, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
+        conn_retries = 0;
+        conn_success = 0;
+
+        while (conn_retries < CONN_RETRIES) {
+            if (connect(sock_fd, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
+#ifdef VERBOSE
+                errprintf("could not connect to socket, retrying... (%d/%d)",
+                          conn_retries + 1, CONN_RETRIES);
+#endif
+            } else {
+                conn_success = 1;
+                break;
+            }
+
+            ++conn_retries;
+        }
+
+        if (!conn_success) {
             errprintf("connecting to socket failed");
             return -1;
         }
