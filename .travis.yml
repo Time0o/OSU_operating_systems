@@ -1,0 +1,26 @@
+language: c
+
+matrix:
+  include:
+    - os: linux
+
+    - os: linux
+      env:
+         - MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
+
+    - os: linux
+      env:
+         - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
+
+    - os: linux
+      env:
+         - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
+
+before_install:
+    - eval "${MATRIX_EVAL}"
+
+script:
+  - ./build_all.sh
+
+notifications:
+  email: false
