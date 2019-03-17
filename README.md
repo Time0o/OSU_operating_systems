@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/Time0o/OSU_operating_systems.svg?branch=master)](https://travis-ci.org/Time0o/OSU_operating_systems)
+
 # Oregon State University _Operating Systems_ assignment solutions
 
 I have never taken this course but I found the assignments interesting, they
