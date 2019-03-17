@@ -7,28 +7,29 @@
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <unistd.h>
 
+#include "proto.h"
+#include "socket.h"
 #include "util.h"
 
-
-/* constants */
-enum { CHUNK_SIZE = 256 };
 
 /* program name */
 char *progname;
 
 
-static long long read_block(char *file, char **block) {
-    FILE *fp = fopen(file, "r");
+static long read_block(char *file, char **block) {
+    FILE *fp;
+    int c;
+    long block_length = 0, block_offs = 0, chunk_size;
+
+    fp = fopen(file, "r");
     if (!fp) {
         errprintf("failed to open '%s'\n", file);
         goto error;
     }
 
     /* determine size of block */
-    long long block_length = 0;
-
-    int c;
     for (;;) {
         c = fgetc(fp);
 
@@ -53,13 +54,12 @@ static long long read_block(char *file, char **block) {
     }
 
     /* read block */
-    long long block_offs = 0, chunk_size;
     while (block_offs < block_length) {
         chunk_size = CHUNK_SIZE;
         if (block_offs + chunk_size > block_length)
             chunk_size = block_length - block_offs;
 
-        if (fread(*block + block_offs, 1, chunk_size, fp) != chunk_size) {
+        if (fread(*block + block_offs, 1, chunk_size, fp) != (size_t) chunk_size) {
             errprintf("failed to read '%s'\n", file);
             free(block);
             goto error;
@@ -77,42 +77,86 @@ error:
 
 
 int main(int argc, char **argv) {
+    int port, sock_fd;
+    char *arg_fmt, *text = NULL, *text_modified = NULL, *key = NULL;
+    long i, text_length, key_length;
+    enum proto proto;
+
     /* store program name */
     progname = basename(argv[0]);
 
     /* parse command line arguments */
     if (argc != 4) {
 #if defined ENC
-        char *arg_fmt = "PLAINTEXT KEY PORT";
+        arg_fmt = "PLAINTEXT KEY PORT";
 #elif defined DEC
-        char *arg_fmt = "CIPHERTEXT KEY PORT";
+        arg_fmt = "CIPHERTEXT KEY PORT";
 #endif
         fprintf(stderr, "Usage: %s %s\n", progname, arg_fmt);
         exit(EXIT_FAILURE);
     }
 
-    int port = strtoll_safe(argv[3]);
+    port = strtol_safe(argv[3]);
     if (port == -1) {
         errprintf("failed to parse port parameter");
         exit(EXIT_FAILURE);
     }
 
     /* read text and key from file */
-    char *text, *key;
-    long long text_length, key_length;
 
     if ((text_length = read_block(argv[1], &text)) == -1)
-        exit(EXIT_FAILURE);
+        goto error;
 
-    if ((key_length = read_block(argv[2], &key)) == -1) {
-        free(text);
-        exit(EXIT_FAILURE);
+    if ((key_length = read_block(argv[2], &key)) == -1)
+        goto error;
+
+    if (key_length < text_length) {
+        errprintf("key too short (%lld/%lld)", key_length, text_length);
+        goto error;
     }
 
-    /* TODO */
+    /* create socket */
+    if ((sock_fd = create_socket(port, SOCKET_CONNECT)) == -1)
+        goto error;
+
+    /* send opcode */
+#if defined ENC
+    proto = PROTO_ENC;
+#elif defined DEC
+    proto = PROTO_DEC;
+#endif
+
+    if (write(sock_fd, &proto, sizeof(proto)) != sizeof(proto))
+        goto error;
+
+    /* send text length and text */
+    if (send_block(sock_fd, text, text_length) == -1)
+        goto error;
+
+    /* send key length and key */
+    if (send_block(sock_fd, key, key_length) == -1)
+        goto error;
+
+    /* receive (en/de)crypted text */
+    if (receive_block(sock_fd, &text_modified, &text_length) == -1)
+        goto error;
+
+    /* dump (en/de)crypted text */
+    for (i = 0; i < text_length; i += sizeof(int))
+        printf("%.*s", (int) sizeof(int), key + i);
+
+    putchar('\n');
 
     free(text);
     free(key);
+    free(text_modified);
 
     exit(EXIT_SUCCESS);
+
+error:
+    free(text);
+    free(key);
+    free(text_modified);
+
+    exit(EXIT_FAILURE);
 }
