@@ -26,25 +26,41 @@ enum { LISTEN_BACKLOG = 128 };
 char *progname;
 
 
+static char ord(char c) {
+    if (c == ' ')
+        return 'Z' - 'A' + 1;
+    else
+        return c - 'A';
+}
+
+
+static char chr(char c) {
+    if (c == 'Z' - 'A' + 1)
+        return ' ';
+    else
+        return c + 'A';
+}
+
+
 static void code(char *text, char *key, long text_length) {
     char t, k;
 #ifdef DEC
-    char tmp;
+    int tmp;
 #endif
     long i;
 
     for (i = 0; i < text_length; ++i) {
-        t = text[i] - 'A';
-        k = key[i] - 'A';
+        t = ord(text[i]);
+        k = ord(key[i]);
 
 #if defined ENC
-        text[i] = (t + k) % 26 + 'A';
+        text[i] = chr((t + k) % ('Z' - 'A' + 2));
 #elif defined DEC
         tmp = t - k;
         if (tmp < 0)
-            tmp += 26;
+            tmp += 'Z' - 'A' + 2;
 
-        text[i] = tmp + 'A';
+        text[i] = chr(tmp);
 #endif
     }
 }
