@@ -16,21 +16,28 @@ char *progname;
 
 /* main function */
 int main(int argc, char **argv) {
+    char *buf, connections[100], *prompt, *prompt_fmt, *room_dir, **room_names;
+
+    int conn_idx, next_room_valid, num_rooms, num_room_names, path_length, ret,
+        room_idx, room_name_idx;
+
+    struct room *current_room, *next_room, *rooms;
+    struct ll path_head, *path_tail, *path_node, *tmp;
+
+    (void) argc;
+
     progname = basename(argv[0]);
 
-    char *room_dir = NULL, **room_names = NULL;
-    struct room *rooms = NULL;
-
-    int room_idx, room_name_idx, conn_idx;
-
-    int ret = 1;
+    ret = 1;
 
     /* create room directory */
+    room_dir = NULL;
     if (create_room_dir(&room_dir) == -1)
         return 1;
 
     /* parse room names */
-    int num_room_names = read_room_names(&room_names);
+    room_names = NULL;
+    num_room_names = read_room_names(&room_names);
     if (num_room_names == -1)
         goto cleanup1;
 
@@ -39,35 +46,27 @@ int main(int argc, char **argv) {
         goto cleanup2;
 
     /* read rooms in again */
-    int num_rooms;
+    rooms = NULL;
     if ((num_rooms = read_rooms(room_dir, &rooms)) == -1)
         goto cleanup3;
 
     ret = 0;
 
     /* find starting room */
-    struct room *current_room, *next_room;
-
+    current_room = &rooms[0];
     for (room_idx = 0; room_idx < NUM_ROOMS; ++room_idx) {
         if (rooms[room_idx].type == START_ROOM)
             current_room = &rooms[room_idx];
     }
 
     /* store path taken in linked list */
-    struct ll path_head, *path_tail, *path_node, *tmp;
-    int path_length = 0;
-
+    path_length = 0;
     path_head.val = current_room->name;
     path_head.next = NULL;
 
     path_tail = &path_head;
 
     /* start readline loop */
-    char const *prompt_fmt =
-        "CURRENT LOCATION: %s\nPOSSIBLE CONNECTIONS: %s\nWHERE TO? >";
-
-    char connections[100];
-
     for (;;) {
         connections[0] = '\0';
         for (conn_idx = 0; conn_idx < MAX_CONN; ++conn_idx) {
@@ -83,10 +82,10 @@ int main(int argc, char **argv) {
             }
         }
 
-        char *prompt;
+        prompt_fmt = "CURRENT LOCATION: %s\nPOSSIBLE CONNECTIONS: %s\nWHERE TO? >";
         asprintf(&prompt, prompt_fmt, current_room->name, connections);
 
-        char *buf = readline(prompt);
+        buf = readline(prompt);
 
         free(prompt);
 
@@ -95,7 +94,7 @@ int main(int argc, char **argv) {
 
         putchar('\n');
 
-        int next_room_valid = 0;
+        next_room_valid = 0;
         for (conn_idx = 0; conn_idx < MAX_CONN; ++conn_idx) {
             if (!(next_room = current_room->connections[conn_idx]))
                 break;

@@ -14,10 +14,10 @@ extern char *progname;
 /* print formatted error message to stderr */
 int errprintf(char const *msg, ...) {
     va_list va;
+    char *buf;
 
     va_start(va, msg);
 
-    char *buf;
     if (vasprintf(&buf, msg, va) == -1) {
         va_end(va);
         return -1;

@@ -7,7 +7,8 @@ SRC=$(wildcard $(SRC_DIR)/*.c)
 INC=$(wildcard $(INC_DIR)/*.h)
 OBJ=$(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRC))
 
-CFLAGS=-std=c89 -Wall -g -lreadline
+CFLAGS=-std=c89 -pedantic -g -O3 -lreadline \
+        -Wall -Wextra -Wmissing-prototypes -Wstrict-prototypes -Wold-style-definition
 
 $(BIN_DIR)/adventure: $(OBJ)
 	gcc $(CFLAGS) -o $@ $^

@@ -25,11 +25,16 @@ char const *ROOM_TYPE_STR[] = { ROOM_TYPES(STRING) };
 
 
 int read_room_names(char ***room_names) {
+    char ch, *line, *room_name_path, *source_file;
+    int num_room_names = 0, num_room_names_valid = 0, r = 0, r_ = 0;
+
+    FILE *fp;
+    size_t len = 0;
+
     /* open room name file */
-    char *source_file = malloc(strlen(__FILE__) + 1);
+    source_file = malloc(strlen(__FILE__) + 1);
     strcpy(source_file, __FILE__);
 
-    char *room_name_path;
     if (asprintf(&room_name_path, "%s/%s", dirname(source_file), ROOM_NAME_FILE) == -1) {
         errprintf("asprintf failed");
         free(source_file);
@@ -38,7 +43,6 @@ int read_room_names(char ***room_names) {
 
     free(source_file);
 
-    FILE *fp;
     if (!(fp = fopen(room_name_path, "r"))) {
         errprintf("failed to open '%s'", room_name_path);
         free(room_name_path);
@@ -48,10 +52,8 @@ int read_room_names(char ***room_names) {
     free(room_name_path);
 
     /* count number of distinct room names */
-    int num_room_names = 0;
-
     for (;;) {
-        char ch = fgetc(fp);
+        ch = fgetc(fp);
 
         if (ch == EOF) {
             if (ferror(fp)) {
@@ -74,12 +76,10 @@ int read_room_names(char ***room_names) {
 
     /* read in room names */
     *room_names = malloc(num_room_names * sizeof(char *));
-    int num_room_names_valid = 0;
 
-    int r = 0;
     for (r = 0; r < num_room_names; ++r) {
-        char *line = NULL;
-        size_t len = 0;
+        line = NULL;
+        len = 0;
 
         errno = 0;
         if (getline(&line, &len, fp) == -1) {
@@ -88,7 +88,7 @@ int read_room_names(char ***room_names) {
             if (errno == EINVAL || errno == ENOMEM) {
                 errprintf("getline failed");
 
-                int r_ = 0;
+                r_ = 0;
                 for (r_ = 0; r_ < num_room_names_valid; ++r_)
                     free((*room_names)[r_]);
 
@@ -116,15 +116,18 @@ int read_room_names(char ***room_names) {
 
 
 int create_room_dir(char **room_dir) {
-    char *username = getlogin();
-    pid_t pid = getpid();
+    char *username;
+    pid_t pid;
+    struct stat st;
+
+    username = getlogin();
+    pid = getpid();
 
     if (asprintf(room_dir, ROOM_DIR_FMT, username, (uintmax_t) pid) == -1) {
         errprintf("asprintf failed");
         return -1;
     }
 
-    struct stat st;
     if (stat(*room_dir, &st) == 0) {
         errprintf("file '%s' already exists", *room_dir);
         free(*room_dir);
@@ -147,19 +150,19 @@ int create_room_dir(char **room_dir) {
 
 
 int create_rooms(char *room_dir, char **room_names, int num_room_names) {
+    struct room *next_room_ptr, room, *rooms, *room_ptr;
+
+    int conn, conn_next, conn_prev, num_connections, room_idx, room_idx_next,
+        room_name_idx, ret, *room_name_taken, unique;
+
     /* see rand */
     srand(time(NULL));
 
-    /* indexing variables */
-    int room_idx, room_idx_next, room_name_idx, conn, conn_prev, conn_next;
-
     /* create rooms structures */
-    struct room *rooms = malloc(NUM_ROOMS * sizeof(struct room));
-    int *room_name_taken = calloc(num_room_names, sizeof(int));
+    rooms = malloc(NUM_ROOMS * sizeof(struct room));
+    room_name_taken = calloc(num_room_names, sizeof(int));
 
     for (room_idx = 0; room_idx < NUM_ROOMS; ++room_idx) {
-        struct room room;
-
         /* randomly choose next room name */
         do {
             room_name_idx = rand() % num_room_names;
@@ -169,7 +172,7 @@ int create_rooms(char *room_dir, char **room_names, int num_room_names) {
         room_name_taken[room_name_idx] = 1;
 
         /* pre-allocate connection array */
-        int conn = 0;
+        conn = 0;
         for (conn = 0; conn < MAX_CONN; ++conn)
             room.connections[conn] = NULL;
 
@@ -188,12 +191,12 @@ int create_rooms(char *room_dir, char **room_names, int num_room_names) {
 
     /* connect rooms */
     for (room_idx = 0; room_idx < NUM_ROOMS - 1; ++room_idx) {
-        struct room *room = &rooms[room_idx];
+        room_ptr = &rooms[room_idx];
 
-        int num_connections = rand() % (MAX_CONN - MIN_CONN) + MIN_CONN;
+        num_connections = rand() % (MAX_CONN - MIN_CONN) + MIN_CONN;
 
         for (conn = 0; conn < num_connections; ++conn) {
-            if (room->connections[conn])
+            if (room_ptr->connections[conn])
                 continue;
 
             for (;;) {
@@ -202,11 +205,11 @@ int create_rooms(char *room_dir, char **room_names, int num_room_names) {
                 if (room_idx_next == room_idx)
                     continue;
 
-                struct room *next_room = &rooms[room_idx_next];
+                next_room_ptr = &rooms[room_idx_next];
 
-                int unique = 1;
+                unique = 1;
                 for (conn_prev = conn - 1; conn_prev >= 0; --conn_prev) {
-                    if (room->connections[conn_prev] == next_room) {
+                    if (room_ptr->connections[conn_prev] == next_room_ptr) {
                         unique = 0;
                         break;
                     }
@@ -216,19 +219,19 @@ int create_rooms(char *room_dir, char **room_names, int num_room_names) {
                     continue;
 
                 conn_next = 0;
-                while (next_room->connections[conn_next])
+                while (next_room_ptr->connections[conn_next])
                     ++conn_next;
 
-                next_room->connections[conn_next] = room;
+                next_room_ptr->connections[conn_next] = room_ptr;
 
                 break;
             }
 
-            room->connections[conn] = &rooms[room_idx_next];
+            room_ptr->connections[conn] = &rooms[room_idx_next];
         }
     }
 
-    int ret = write_rooms(room_dir, rooms);
+    ret = write_rooms(room_dir, rooms);
 
     free(rooms);
 
@@ -237,11 +240,13 @@ int create_rooms(char *room_dir, char **room_names, int num_room_names) {
 
 
 static void write_room(struct room room, FILE *fp) {
+    struct room *next_room;
+    int conn = 0;
+
     fprintf(fp, "ROOM NAME: %s\n", room.name);
 
-    int conn = 0;
     for (;;) {
-        struct room *next_room = room.connections[conn];
+        next_room = room.connections[conn];
         if (!next_room)
             break;
 
@@ -256,17 +261,21 @@ static void write_room(struct room room, FILE *fp) {
 
 
 int write_rooms(char *room_dir, struct room *rooms) {
-    int room_idx = 0;
-    for (room_idx = 0; room_idx < NUM_ROOMS; ++room_idx) {
-        struct room room = rooms[room_idx];
+    char *file_name;
+    FILE *fp;
 
-        char *file_name = NULL;
+    struct room room;
+    int room_idx = 0;
+
+    for (room_idx = 0; room_idx < NUM_ROOMS; ++room_idx) {
+        room = rooms[room_idx];
+
+        file_name = NULL;
         if (asprintf(&file_name, "%s/%s.txt", room_dir, room.name) == -1) {
             errprintf("asprintf failed");
             return -1;
         }
 
-        FILE *fp;
         if (!(fp = fopen(file_name, "w"))) {
             errprintf("failed to open '%s'", file_name);
             free(file_name);
@@ -285,17 +294,23 @@ int write_rooms(char *room_dir, struct room *rooms) {
 
 
 int read_rooms(char *room_dir, struct room **rooms) {
-    /* open directory */
+    int conn_idx, lineno, num_rooms = 0, room_idx, room_idx_next, room_type_idx;
+    char *c = NULL, *line = NULL, *room_path = NULL, *val = NULL;
+
     DIR *dir;
+    struct dirent *dirent;
+    FILE *fp;
+    size_t len;
+    regex_t valid_record;
+
+    /* open directory */
     if (!(dir = opendir(room_dir))) {
         errprintf("failed to read directory '%s'", room_dir);
         return -1;
     }
 
     /* count number of rooms (regular files in room directory) */
-    int num_rooms = 0;
 
-    struct dirent *dirent;
     while ((dirent = readdir(dir))) {
         if (dirent->d_type != DT_REG)
             continue;
@@ -306,14 +321,6 @@ int read_rooms(char *room_dir, struct room **rooms) {
     rewinddir(dir);
 
     /* read rooms into array */
-    char *room_path = NULL, *c = NULL, *val = NULL;
-    int room_idx, room_idx_next, room_type_idx, conn_idx;
-
-    FILE *fp;
-
-    char *line = NULL;
-    size_t len;
-    int lineno;
 
     /* allocate room array */
     *rooms = malloc(num_rooms * sizeof(struct room));
@@ -325,7 +332,6 @@ int read_rooms(char *room_dir, struct room **rooms) {
     }
 
     /* compile file record validation regex */
-    regex_t valid_record;
     if (regcomp(&valid_record,
                 "^(ROOM NAME|CONNECTION [1-9][0-9]*|ROOM TYPE): .*$",
                 REG_EXTENDED)) {
@@ -408,19 +414,17 @@ int read_rooms(char *room_dir, struct room **rooms) {
 
             } else if (strncmp(line, "ROOM TYPE", strlen("ROOM_TYPE")) == 0) {
                 /* read room type */
-                int valid_room_type = 0;
-
                 for (room_type_idx = 0; room_type_idx < NUM_ROOM_TYPE; ++room_type_idx) {
                     if (strcmp(val, ROOM_TYPE_STR[room_type_idx]) == 0) {
                         (*rooms)[room_idx].type = room_type_idx;
-                        valid_room_type = 1;
+                        break;
                     }
                 }
 
                 free(val);
 
                 /* error on invalid room type */
-                if (!valid_room_type) {
+                if (room_type_idx == NUM_ROOM_TYPE) {
                     errprintf("invalid room type '%s'", val);
                     goto error2;
                 }
