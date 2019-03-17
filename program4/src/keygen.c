@@ -20,10 +20,11 @@ char *progname;
 
 /* securely (I hope) generate a random lowercase letter or space
    (see OpenBSDs rc4random_uniform for details) */
-static char random_character() {
+static char random_character(void) {
     static unsigned long thresh = -27 % 27;
 
     unsigned long r;
+
     for (;;) {
         r = random();
         if (r >= thresh) {
@@ -40,6 +41,12 @@ static char random_character() {
 
 
 int main(int argc, char **argv) {
+    char *key;
+    long j, length;
+    int i, fd;
+    unsigned seed;
+    char state[RANDOM_STATE_SIZE];
+
     /* store program name */
     progname = basename(argv[0]);
 
@@ -49,7 +56,7 @@ int main(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
 
-    long long length = strtoll_safe(argv[1]);
+    length = strtol_safe(argv[1]);
     if (length == -1) {
         errprintf("failed to parse key length argument");
         exit(EXIT_FAILURE);
@@ -57,7 +64,7 @@ int main(int argc, char **argv) {
 
     /* allocate heap memory for key
        (not really necessary but makes this more reuseable) */
-    char *key = malloc(length);
+    key = malloc(length);
 
     if (!key) {
         errprintf("failed to allocate memory for key array");
@@ -65,31 +72,27 @@ int main(int argc, char **argv) {
     }
 
     /* securely seed random number generator */
-    int fd = open("/dev/urandom", O_RDONLY);
+    fd = open("/dev/urandom", O_RDONLY);
     if (fd == -1) {
         errprintf("failed to open /dev/urandom");
         free(key);
         exit(EXIT_FAILURE);
     }
 
-    unsigned seed;
     if (read(fd, &seed, sizeof(seed)) < 0) {
         errprintf("failed to read from /dev/urandom");
         free(key);
         exit(EXIT_FAILURE);
     }
 
-    char state[RANDOM_STATE_SIZE];
     initstate(seed, state, sizeof(state));
     setstate(state);
 
     /* generate key */
-    int i;
     for (i = 0; i < length; ++i)
         key[i] = random_character();
 
     /* dump key */
-    long long int j;
     for (j = 0; j < length; j += sizeof(int))
         printf("%.*s", (int) sizeof(int), key + j);
 

@@ -26,10 +26,13 @@ enum { LISTEN_BACKLOG = 128 };
 char *progname;
 
 
-static void code(char *text, char *key, long long text_length) {
+static void code(char *text, char *key, long text_length) {
     char t, k;
+#ifdef DEC
+    char tmp;
+#endif
+    long i;
 
-    long long i;
     for (i = 0; i < text_length; ++i) {
         t = text[i] - 'A';
         k = key[i] - 'A';
@@ -37,7 +40,7 @@ static void code(char *text, char *key, long long text_length) {
 #if defined ENC
         text[i] = (t + k) % 26 + 'A';
 #elif defined DEC
-        char tmp = t - k;
+        tmp = t - k;
         if (tmp < 0)
             tmp += 26;
 
@@ -48,6 +51,10 @@ static void code(char *text, char *key, long long text_length) {
 
 
 int main(int argc, char **argv) {
+    int port, sock_fd, client_sock_fd;
+    struct sockaddr_in client_addr;
+    unsigned client_addr_size;
+
     /* store program name */
     progname = basename(argv[0]);
 
@@ -57,14 +64,12 @@ int main(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
 
-    int port;
-    if ((port = strtoll_safe(argv[1])) == -1) {
+    if ((port = strtol_safe(argv[1])) == -1) {
         errprintf("failed to parse port argument");
         exit(EXIT_FAILURE);
     }
 
     /* create socket */
-    int sock_fd;
     if ((sock_fd = create_socket(port, SOCKET_BIND)) == -1) {
         errprintf("failed to create socket");
         exit(EXIT_FAILURE);
@@ -77,13 +82,11 @@ int main(int argc, char **argv) {
     }
 
     /* handle client requests */
-    struct sockaddr_in client_addr;
-    unsigned client_addr_size = sizeof(client_addr);
-
+    client_addr_size = sizeof(client_addr);
     for (;;) {
-        int client_sock_fd = accept(sock_fd,
-                                    (struct sockaddr *) &client_addr,
-                                    &client_addr_size);
+        client_sock_fd = accept(sock_fd,
+                                (struct sockaddr *) &client_addr,
+                                &client_addr_size);
 
         if (client_sock_fd == -1) {
             errprintf("accepting client failed");
@@ -97,7 +100,9 @@ int main(int argc, char **argv) {
                 break;
             case 0:
                 {
-                char buf[BUF_SIZE];
+                char buf[BUF_SIZE], *text, *key;
+                enum proto proto;
+                long text_length, key_length;
 
                 /* receive protocol opcode */
                 if (read(client_sock_fd, buf, sizeof(enum proto)) == -1) {
@@ -105,7 +110,6 @@ int main(int argc, char **argv) {
                     _Exit(EXIT_FAILURE);
                 }
 
-                enum proto proto;
                 memcpy(&proto, buf, sizeof(proto));
 
 #if defined ENC
@@ -119,14 +123,10 @@ int main(int argc, char **argv) {
                 }
 
                 /* receive text */
-                char *text;
-                long long text_length;
                 if (receive_block(client_sock_fd, &text, &text_length) == -1)
                     _Exit(EXIT_FAILURE);
 
                 /* receive key */
-                char *key;
-                long long key_length;
                 if (receive_block(client_sock_fd, &key, &key_length) == -1) {
                     free(text);
                     _Exit(EXIT_FAILURE);

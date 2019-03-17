@@ -7,7 +7,8 @@ SRC=$(wildcard $(SRC_DIR)/*.c)
 INC=$(wildcard $(INC_DIR)/*.h)
 OBJ=$(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRC))
 
-CFLAGS=-std=c89 -Wall -g
+CFLAGS=-std=c89 -pedantic -g -O3 \
+        -Wall -Wextra -Wmissing-prototypes -Wstrict-prototypes -Wold-style-definition
 
 _progs=keygen otp_enc otp_dec otp_enc_d otp_dec_d
 progs=$(patsubst %, $(BIN_DIR)/%, $(_progs))

@@ -17,10 +17,10 @@ extern char *progname;
 /* print formatted error message to stderr */
 int errprintf(char const *msg, ...) {
     va_list va;
+    char *buf;
 
     va_start(va, msg);
 
-    char *buf;
     if (vasprintf(&buf, msg, va) == -1) {
         va_end(va);
         return -1;
@@ -35,11 +35,12 @@ int errprintf(char const *msg, ...) {
 
 
 /* strtol wrapper with error handling */
-long long strtoll_safe(char *str) {
+long strtol_safe(char *str) {
     char *endptr;
+    long n;
 
     errno = 0;
-    long long n = strtoll(str, &endptr, 10);
+    n = strtol(str, &endptr, 10);
 
     if (errno != 0 || *endptr != '\0')
         return -1;

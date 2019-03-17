@@ -3,6 +3,6 @@
 
 int errprintf(char const *msg, ...);
 
-long long strtoll_safe(char *str);
+long strtol_safe(char *str);
 
 #endif /* UTIL_H */

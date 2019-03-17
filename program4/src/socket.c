@@ -11,15 +11,16 @@
 
 
 int create_socket(int port, enum socket_mode mode) {
-    /* create socket */
     int sock_fd;
+    struct sockaddr_in addr;
+
+    /* create socket */
     if ((sock_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
         errprintf("failed to create socket");
         return -1;
     }
 
     /* bind socket */
-    struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
 
     addr.sin_family = AF_INET;
@@ -44,10 +45,17 @@ int create_socket(int port, enum socket_mode mode) {
 }
 
 
-int send_block(int sock_fd, char *block, long long block_length) {
-    long long block_offs = 0, chunk_size;
-
+int send_block(int sock_fd, char *block, long block_length) {
     ssize_t write_size;
+    long block_offs = 0, chunk_size;
+
+    /* send block size */
+    if (write(sock_fd, &block_length, sizeof(block_length)) == -1) {
+        errprintf("failed to send block size (%s)", strerror(errno));
+        return -1;
+    }
+
+    /* send block data */
     while (block_offs < block_length) {
         chunk_size = CHUNK_SIZE;
         if (block_offs + chunk_size > block_length)
@@ -67,8 +75,10 @@ int send_block(int sock_fd, char *block, long long block_length) {
 }
 
 
-int receive_block(int sock_fd, char **block, long long *block_length) {
+int receive_block(int sock_fd, char **block, long *block_length) {
     char buf[BUF_SIZE];
+    ssize_t read_size;
+    long block_offs = 0;
 
     /* receive block size */
     if (read(sock_fd, buf, sizeof(*block_length)) == -1) {
@@ -86,10 +96,6 @@ int receive_block(int sock_fd, char **block, long long *block_length) {
     }
 
     /* receive block data */
-    ssize_t read_size;
-
-    long long block_offs = 0;
-
     while (block_offs < *block_length) {
         if ((read_size = read(sock_fd, buf, BUF_SIZE)) == -1) {
             errprintf("failed to receive data (%s)", strerror(errno));
