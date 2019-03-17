@@ -69,6 +69,7 @@ static long read_block(char *file, char **block) {
         block_offs += chunk_size;
     }
 
+    fclose(fp);
     return block_length;
 
 error:
