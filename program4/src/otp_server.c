@@ -19,74 +19,10 @@
 
 
 /* constants */
-enum { BUF_SIZE = 256, CHUNK_SIZE = 256, LISTEN_BACKLOG = 128 };
+enum { LISTEN_BACKLOG = 128 };
 
 /* program name */
 char *progname;
-
-
-static long long receive_block(
-    int sock_fd, char *buf, size_t buf_size, char **block) {
-
-    /* receive block size */
-    long long block_length, block_offs = 0;
-    if (read(sock_fd, buf, sizeof(block_length)) == -1) {
-        errprintf("failed to receive block size");
-        return -1;
-    }
-
-    memcpy(&block_length, buf, sizeof(block_length));
-
-    /* allocate block */
-    *block = malloc(block_length);
-    if (!*block) {
-        errprintf("failed to allocate block");
-        return -1;
-    }
-
-    /* receive block data */
-    ssize_t read_size;
-    while (block_offs < block_length) {
-        if ((read_size = read(sock_fd, buf, buf_size)) == -1) {
-            errprintf("failed to receive data");
-            free(block);
-            return -1;
-        }
-
-        if (block_offs + read_size > block_length)
-            read_size = block_length - block_offs;
-
-        memcpy(*block + block_offs, buf, read_size);
-
-        block_offs += read_size;
-    }
-
-    return block_length;
-}
-
-
-static int send_block(
-    int sock_fd, char *block, long long block_length, long long chunk_size) {
-
-    long long block_offs = 0;
-
-    ssize_t write_size;
-    while (block_offs < block_length) {
-        if (block_offs + chunk_size > block_length)
-            chunk_size = block_length - block_offs;
-
-        if ((write_size =
-             write(sock_fd, block + block_offs, chunk_size)) == -1) {
-
-            errprintf("failed to send data");
-            return -1;
-        }
-
-        block_offs += write_size;
-    }
-
-    return 0;
-}
 
 
 static void code(char *text, char *key, long long text_length) {
@@ -184,7 +120,7 @@ int main(int argc, char **argv) {
                 char *text;
                 long long text_length;
                 if ((text_length =
-                     receive_block(sock_fd, buf, BUF_SIZE, &text)) == -1) {
+                     receive_block(sock_fd, &text, &text_length)) == -1) {
 
                     _Exit(EXIT_FAILURE);
                 }
@@ -193,7 +129,7 @@ int main(int argc, char **argv) {
                 char *key;
                 long long key_length;
                 if ((key_length =
-                     receive_block(sock_fd, buf, BUF_SIZE, &key)) == -1) {
+                     receive_block(sock_fd, &key, &key_length)) == -1) {
 
                     free(text);
                     _Exit(EXIT_FAILURE);
@@ -211,7 +147,7 @@ int main(int argc, char **argv) {
                 code(text, key, text_length);
 
                 /* send result */
-                if (send_block(sock_fd, text, text_length, CHUNK_SIZE) == -1)
+                if (send_block(sock_fd, text, text_length) == -1)
                     _Exit(EXIT_FAILURE);
                 }
                 break;
