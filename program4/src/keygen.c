@@ -35,7 +35,7 @@ static char random_character() {
     if (r == 26)
         return ' ';
     else
-        return (char) r + 'a';
+        return (char) r + 'A';
 }
 
 

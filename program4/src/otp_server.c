@@ -30,17 +30,17 @@ static void code(char *text, char *key, long long text_length) {
 
     long long i;
     for (i = 0; i < text_length; ++i) {
-        t = text[i] - 'a';
-        k = key[i] - 'a';
+        t = text[i] - 'A';
+        k = key[i] - 'A';
 
 #if defined ENC
-        text[i] = (t + k) % 26 + 'a';
+        text[i] = (t + k) % 26 + 'A';
 #elif defined DEC
         char tmp = t - k;
         if (tmp < 0)
             tmp += 26;
 
-        text[i] = tmp + 'a';
+        text[i] = tmp + 'A';
 #endif
     }
 }
