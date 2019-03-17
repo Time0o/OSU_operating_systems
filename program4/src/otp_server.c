@@ -51,7 +51,7 @@ static void code(char *text, char *key, long text_length) {
 
 
 int main(int argc, char **argv) {
-    int port, sock_fd, client_sock_fd;
+    int port, sock_fd, client_sock_fd, handshake;
     struct sockaddr_in client_addr;
     unsigned client_addr_size;
 
@@ -118,6 +118,19 @@ int main(int argc, char **argv) {
                 if (proto != PROTO_DEC)
 #endif
                 {
+                    handshake = 0;
+                } else {
+                    handshake = 1;
+                }
+
+                if (write(client_sock_fd, &handshake, sizeof(handshake))
+                    != sizeof(handshake)) {
+
+                    errprintf("failed to send handshake");
+                    _Exit(EXIT_FAILURE);
+                }
+
+                if (!handshake) {
                     errprintf("invalid protocol");
                     _Exit(EXIT_FAILURE);
                 }

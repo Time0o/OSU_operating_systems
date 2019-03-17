@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -77,10 +78,11 @@ error:
 
 
 int main(int argc, char **argv) {
-    int port, sock_fd;
+    int port, sock_fd, handshake;
     char *arg_fmt, *text = NULL, *text_modified = NULL, *key = NULL;
     long i, text_length, key_length;
     enum proto proto;
+    struct timeval tv;
 
     /* store program name */
     progname = basename(argv[0]);
@@ -125,8 +127,34 @@ int main(int argc, char **argv) {
     proto = PROTO_DEC;
 #endif
 
-    if (write(sock_fd, &proto, sizeof(proto)) != sizeof(proto))
+    if (write(sock_fd, &proto, sizeof(proto)) != sizeof(proto)) {
+        errprintf("failed to send protocol opcode");
         goto error;
+    }
+
+    tv.tv_sec = HANDSHAKE_TIMEOUT;
+    tv.tv_usec = 0;
+    if (setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, (char *) &tv, sizeof(tv)) == -1) {
+        errprintf("setsockopt failed");
+        goto error;
+    }
+
+    if (read(sock_fd, &handshake, sizeof(handshake)) != sizeof(handshake)) {
+        errprintf("did not receive handshake from server");
+        goto error;
+    }
+
+    tv.tv_sec = 0;
+    tv.tv_usec = 0;
+    if (setsockopt(sock_fd, SOL_SOCKET, SO_RCVTIMEO, (char *) &tv, sizeof(tv)) == -1) {
+        errprintf("setsockopt failed");
+        goto error;
+    }
+
+    if (!handshake) {
+        errprintf("server did not acknowledge connection");
+        goto error;
+    }
 
     /* send text length and text */
     if (send_block(sock_fd, text, text_length) == -1)
